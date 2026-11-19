@@ -28,6 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <skipFrontend>false</skipFrontend>
     </properties>
     <dependencies>
         <dependency>
@@ -54,7 +55,57 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The built Angular app, served by Spring as static files. -->
+            <resource>
+                <directory>frontend/dist/frontend/browser</directory>
+                <targetPath>static</targetPath>
+            </resource>
+        </resources>
         <plugins>
+            <!-- Builds the Angular app in frontend/ before resources are copied. Needs Node.js (npm) on the PATH. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <configuration>
+                    <skip>${skipFrontend}</skip>
+                    <workingDirectory>${project.basedir}/frontend</workingDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>npm-install</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>install</argument>
+                                <argument>--no-audit</argument>
+                                <argument>--no-fund</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>ng-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>build</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

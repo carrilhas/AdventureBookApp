@@ -1,0 +1,13 @@
+<h1>Who's playing?</h1>
+<p>Enter your name to save your progress. Use the same name later to pick up where you left off.</p>
+
+<form class="register" (submit)="submit($event)">
+  <input type="text" name="name" placeholder="Your name" aria-label="Your name" maxlength="50" autofocus />
+  <button type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Start' }}</button>
+</form>
+
+@if (error(); as e) {
+  <p class="error">{{ e }}</p>
+}
+
+<p><a routerLink="/">Back to books</a></p>

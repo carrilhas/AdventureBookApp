@@ -54,6 +54,7 @@ public class BookLoader implements ApplicationRunner {
     private void loadBook(Path file) {
         try {
             Book book = jsonMapper.readValue(file.toFile(), Book.class);
+            book.setId(idFromFileName(file));
             if(isValidBook(book)){
                 books.add(book);
                 log.info("Loaded book '{}' from {}", book.getTitle(), file.getFileName());
@@ -164,10 +165,17 @@ public class BookLoader implements ApplicationRunner {
         return value != null && value.toLowerCase(Locale.ROOT).contains(lowerCaseQuery);
     }
 
-    public Optional<Book> findByTitle(String title) {
-        if (title == null) {
+    /** "Crystal Caverns.json" -> "crystal-caverns" */
+    private static String idFromFileName(Path file) {
+        String name = file.getFileName().toString();
+        String stem = name.substring(0, name.length() - ".json".length());
+        return stem.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+    }
+
+    public Optional<Book> findById(String id) {
+        if (id == null) {
             return Optional.empty();
         }
-        return books.stream().filter(b -> title.equals(b.getTitle())).findFirst();
+        return books.stream().filter(b -> id.equals(b.getId())).findFirst();
     }
 }

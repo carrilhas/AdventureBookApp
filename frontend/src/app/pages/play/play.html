@@ -1,0 +1,55 @@
+<p><a routerLink="/">&larr; All books</a></p>
+
+@if (loadError(); as e) {
+  <p class="error">{{ e }}</p>
+} @else if (game.value(); as s) {
+  <h1>{{ s.bookTitle }}</h1>
+
+  <div class="health" [class.low]="healthPercent() <= 30">
+    <span>Health {{ s.health }} / {{ s.maxHealth }}</span>
+    <div class="bar" role="progressbar" aria-label="Health" [attr.aria-valuenow]="s.health"
+         aria-valuemin="0" [attr.aria-valuemax]="s.maxHealth">
+      <div class="fill" [style.width.%]="healthPercent()"></div>
+    </div>
+  </div>
+
+  @if (error(); as e) {
+    <p class="error">{{ e }}</p>
+  }
+  @if (s.message) {
+    <p class="consequence">{{ s.message }}</p>
+  }
+
+  <p class="story">{{ s.text }}</p>
+
+  @switch (s.status) {
+    @case ('PLAYING') {
+      @if (s.options.length) {
+        <div class="options">
+          @for (option of s.options; track option.index) {
+            <button type="button" [disabled]="busy()" (click)="choose(s, option.index)">{{ option.description }}</button>
+          }
+        </div>
+      } @else {
+        <p class="meta">There's nowhere to go from here.</p>
+        <button type="button" [disabled]="busy()" (click)="restart()">Start over</button>
+      }
+    }
+    @case ('DEAD') {
+      <div class="ending dead">
+        <h2>You died</h2>
+        <button type="button" [disabled]="busy()" (click)="restart()">Try again</button>
+        <a routerLink="/">Pick another book</a>
+      </div>
+    }
+    @case ('FINISHED') {
+      <div class="ending finished">
+        <h2>The end</h2>
+        <button type="button" [disabled]="busy()" (click)="restart()">Play again</button>
+        <a routerLink="/">Pick another book</a>
+      </div>
+    }
+  }
+} @else {
+  <p class="meta">Loading…</p>
+}
