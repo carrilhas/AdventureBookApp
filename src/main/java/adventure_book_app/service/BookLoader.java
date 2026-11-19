@@ -1,6 +1,8 @@
 package adventure_book_app.service;
 
 import adventure_book_app.model.book.Book;
+import adventure_book_app.model.book.Difficulty;
+import adventure_book_app.model.book.Section;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -11,9 +13,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -54,14 +54,120 @@ public class BookLoader implements ApplicationRunner {
     private void loadBook(Path file) {
         try {
             Book book = jsonMapper.readValue(file.toFile(), Book.class);
-            books.add(book);
-            log.info("Loaded book '{}' from {}", book.getTitle(), file.getFileName());
+            if(isValidBook(book)){
+                books.add(book);
+                log.info("Loaded book '{}' from {}", book.getTitle(), file.getFileName());
+            }
+
         } catch (Exception e) {
             log.warn("Could not map {} to a Book: {}", file.getFileName(), e.getMessage());
         }
     }
 
+    /**
+     * Checks book to see if it is a valid book for the adventure game
+     * @param book
+     * @return whether the book can be played
+     */
+    private boolean isValidBook(Book book) {
+        if(!hasSingleBeginNodes(book) //altered from requirements but it does make sense to check that there's 1 BEGIN node and not zero
+                || hasNoEndingNode(book)
+                || hasInvalidNextSectionId(book)
+                //|| nonEndingSectionHasNoOptions(book)
+                //uncomment this to complete the filtering rules of books, causing us to get no valid books from the test data
+        )
+        {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @return true if any section that isn't an END section has no options (the player would be stuck there)
+     */
+    private boolean nonEndingSectionHasNoOptions(Book book) {
+        List<Integer> sectionIds = book.getSections().stream()
+                .filter(section -> !"END".equals(section.getType()))
+                .filter(section -> section.getOptions() == null || section.getOptions().isEmpty())
+                .map(Section::getId)
+                .toList();
+
+        if (!sectionIds.isEmpty()) {
+            log.warn("Book '{}' has non-ending sections with no options: {}", book.getTitle(), sectionIds);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return true if any option has no gotoId or points to a section id that doesn't exist in the book
+     */
+    private boolean hasInvalidNextSectionId(Book book) {
+        Set<Integer> allSectionIds = new HashSet<>();
+        List<Integer> allOptionIds = new ArrayList<>();
+        book.getSections().forEach(section -> allSectionIds.add(section.getId()));
+        book.getSections().stream()
+                .filter(section -> section.getOptions() != null) // END sections have no options
+                .forEach(section -> section.getOptions().forEach(option -> allOptionIds.add(option.getGotoId())));
+
+        List<Integer> invalidIds = allOptionIds.stream()
+                .filter(gotoId -> gotoId == null || !allSectionIds.contains(gotoId))
+                .toList();
+        if (!invalidIds.isEmpty()) {
+            log.warn("Book '{}' has options pointing to missing sections: {}", book.getTitle(), invalidIds);
+        }
+        return !invalidIds.isEmpty();
+    }
+
+    private boolean hasNoEndingNode(Book book) {
+        return book.getSections().stream().noneMatch(section -> "END".equals(section.getType()));
+    }
+
+    private boolean hasSingleBeginNodes(Book book) {
+        return book.getSections().stream().filter(section -> "BEGIN".equals(section.getType())).count() == 1;
+    }
+
     public List<Book> getBooks() {
         return Collections.unmodifiableList(books);
+    }
+
+    /**
+     * Returns the books matching all the given filters. Null or blank filters are ignored.
+     *
+     * @param query      case-insensitive text matched against the title or the author
+     * @param author     exact author name (case-insensitive)
+     * @param difficulty exact difficulty
+     */
+    public List<Book> search(String query, String author, Difficulty difficulty) {
+        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String a = author == null ? "" : author.trim();
+        return books.stream()
+                .filter(b -> q.isEmpty()
+                        || contains(b.getTitle(), q)
+                        || contains(b.getAuthor(), q))
+                .filter(b -> a.isEmpty() || a.equalsIgnoreCase(b.getAuthor()))
+                .filter(b -> difficulty == null || difficulty == b.getDifficulty())
+                .toList();
+    }
+
+    /** Distinct author names of the loaded books, sorted alphabetically. */
+    public List<String> getAuthors() {
+        return books.stream()
+                .map(Book::getAuthor)
+                .filter(a -> a != null && !a.isBlank())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private static boolean contains(String value, String lowerCaseQuery) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(lowerCaseQuery);
+    }
+
+    public Optional<Book> findByTitle(String title) {
+        if (title == null) {
+            return Optional.empty();
+        }
+        return books.stream().filter(b -> title.equals(b.getTitle())).findFirst();
     }
 }

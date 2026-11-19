@@ -1,0 +1,16 @@
+{
+  "name" : "mmm",
+  "progress" : {
+    "The Crystal Caverns" : {
+      "sectionId" : 1,
+      "health" : 10,
+      "lastMessage" : null
+    },
+    "Pirates of the Jade Sea" : {
+      "sectionId" : 1,
+      "health" : 10,
+      "lastMessage" : null
+    }
+  },
+  "score" : 0
+}

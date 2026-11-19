@@ -85,9 +85,8 @@ public class PlayerService {
         }
     }
 
-    /** Records which section the player is on in the given book and saves it. */
-    public synchronized void saveProgress(Player player, String bookTitle, int sectionId) {
-        player.getProgress().put(bookTitle, sectionId);
+    /** Saves the player's current state (including progress) to disk. */
+    public synchronized void save(Player player) {
         save(idFor(player.getName()), player);
     }
 

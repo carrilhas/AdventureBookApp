@@ -25,6 +25,13 @@ public final class HtmlLayout {
                     .error { color: #b00020; }
                     input[type=text] { padding: .4rem; font-size: 1rem; }
                     button { padding: .4rem .8rem; font-size: 1rem; }
+                    .filters { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1.5rem; }
+                    .filters input[type=search] { flex: 1 1 200px; padding: .4rem; font-size: 1rem; }
+                    .filters select { padding: .4rem; font-size: 1rem; }
+                    .story { font-size: 1.15rem; line-height: 1.5; }
+                    .consequence { background: #fff4d6; border-left: 4px solid #e0a800; padding: .5rem .75rem; }
+                    .options { display: flex; flex-direction: column; gap: .5rem; }
+                    .options button { text-align: left; padding: .75rem 1rem; cursor: pointer; }
                   </style>
                 </head>
                 <body>

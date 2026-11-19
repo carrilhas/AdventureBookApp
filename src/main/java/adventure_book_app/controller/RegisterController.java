@@ -10,11 +10,12 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
-import java.net.URI;
 import java.time.Duration;
 
 @RestController
@@ -28,21 +29,30 @@ public class RegisterController {
     private final RegisterPage registerPage;
 
     @GetMapping(value = "/register", produces = MediaType.TEXT_HTML_VALUE)
-    public String registerForm() {
-        return registerPage.generateHtml(null, null);
+    public String registerForm(@RequestParam(name = "next", required = false) String next) {
+        return registerPage.generateHtml(null, null, safeNext(next));
+    }
+
+    /** Only allow redirects to local paths, so the "next" parameter can't send players to another site. */
+    private static String safeNext(String next) {
+        if (next == null || !next.startsWith("/") || next.startsWith("//") || next.contains("\\")) {
+            return "/";
+        }
+        return next;
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Mono<ResponseEntity<String>> register(ServerWebExchange exchange) {
         return exchange.getFormData().map(form -> {
             String name = form.getFirst("name");
+            String next = safeNext(form.getFirst("next"));
             Player player;
             try {
                 player = playerService.register(name);
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest()
                         .contentType(MediaType.TEXT_HTML)
-                        .body(registerPage.generateHtml(name, e.getMessage()));
+                        .body(registerPage.generateHtml(name, e.getMessage(), next));
             }
 
             ResponseCookie cookie = ResponseCookie.from(PLAYER_COOKIE, PlayerService.idFor(player.getName()))
@@ -52,7 +62,7 @@ public class RegisterController {
                     .maxAge(Duration.ofDays(365))
                     .build();
             exchange.getResponse().addCookie(cookie);
-            return ResponseEntity.status(HttpStatus.SEE_OTHER).location(URI.create("/")).<String>build();
+            return ResponseEntity.status(HttpStatus.SEE_OTHER).location(UriComponentsBuilder.fromUriString(next).build().encode().toUri()).<String>build();
         });
     }
 }
