@@ -92,3 +92,36 @@ button:disabled { opacity: .6; cursor: default; }
 .ending h2 { flex-basis: 100%; }
 .ending.dead h2 { color: var(--bad); }
 .ending.finished h2 { color: var(--good); }
+
+.page-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+
+/* New book editor */
+.editor { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
+.editor fieldset { margin: 0; width: 100%; display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
+.editor legend { font-weight: 700; padding: 0 .25rem; }
+.editor label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; color: var(--muted); min-width: 0; }
+.editor input, .editor select, .editor textarea { color: var(--text); width: 100%; }
+.editor textarea {
+  font: inherit; padding: .45rem .6rem; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); resize: vertical;
+}
+.editor .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
+.editor .narrow { flex: 0 1 10rem; }
+.editor .grow { flex: 1 1 14rem; }
+.editor .section.begin { border-left: 4px solid var(--good); }
+.editor .section.end { border-left: 4px solid var(--accent); }
+.editor .option { border-top: 1px dashed var(--border); padding-top: .75rem; display: flex; flex-direction: column; gap: .5rem; }
+
+button.link { background: none; border: none; color: var(--accent); padding: .45rem 0; }
+button.link.danger { color: var(--bad); }
+button.link:disabled { color: var(--muted); }
+
+.save-bar {
+  position: sticky; bottom: 0; margin-top: 1.5rem; padding: .75rem 1rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem;
+  box-shadow: 0 -4px 12px rgb(0 0 0 / .08);
+}
+.save-bar .status { flex: 1 1 16rem; min-width: 0; }
+.save-bar .problems { margin: .25rem 0 0; padding-left: 1.25rem; color: var(--error); }
+.ok { color: var(--good); font-weight: 600; }

@@ -1,4 +1,7 @@
-<h1>Choose your adventure</h1>
+<div class="page-title">
+  <h1>Choose your adventure</h1>
+  <a class="button" routerLink="/books/new">+ New book</a>
+</div>
 
 @if (player.value(); as p) {
   <p>Playing as <strong>{{ p.name }}</strong> &middot; <a routerLink="/register">change</a></p>

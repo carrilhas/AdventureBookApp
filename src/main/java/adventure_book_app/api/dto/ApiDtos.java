@@ -20,6 +20,30 @@ public final class ApiDtos {
     public record PlayerView(String name) {
     }
 
+    /*
+     * Body of POST /api/books: a new book in the same shape as the files in the books folder.
+     * Mapped to the model by adventure_book_app.mapper.BookMapper.
+     */
+
+    public record NewBook(String title, String author, String difficulty, List<NewSection> sections) {
+    }
+
+    public record NewSection(Integer id, String text, String type, List<NewOption> options) {
+    }
+
+    public record NewOption(String description, Integer gotoId, NewConsequence consequence) {
+    }
+
+    public record NewConsequence(String type, String value, String text) {
+    }
+
+    /** Result of checking a new book. {@code problems} is empty when {@code valid} is true. */
+    public record BookValidation(boolean valid, List<String> problems) {
+        public static BookValidation of(List<String> problems) {
+            return new BookValidation(problems.isEmpty(), problems);
+        }
+    }
+
     public record RegisterRequest(String name) {
     }
 

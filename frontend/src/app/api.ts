@@ -43,6 +43,39 @@ export interface ApiError {
   state: PlayState | null;
 }
 
+/** Body of POST /api/books and /api/books/validate: a book in the same shape as the files in the books folder. */
+export interface NewBook {
+  title: string;
+  author: string;
+  difficulty: string;
+  sections: NewSection[];
+}
+
+export interface NewSection {
+  id: number | null;
+  text: string;
+  type: string;
+  options?: NewOption[];
+}
+
+export interface NewOption {
+  description: string;
+  gotoId: number | null;
+  consequence?: NewConsequence;
+}
+
+export interface NewConsequence {
+  type: string;
+  value: string;
+  text: string;
+}
+
+/** The server's verdict on a new book, using the same rules as when the books folder is loaded. */
+export interface BookValidation {
+  valid: boolean;
+  problems: string[];
+}
+
 export interface BookFilters {
   q?: string | null;
   author?: string | null;
@@ -73,6 +106,16 @@ export class BooksApi {
 
   authors(): Observable<string[]> {
     return this.http.get<string[]>('/api/authors');
+  }
+
+  /** Checks a book without saving it. */
+  validate(book: NewBook): Observable<BookValidation> {
+    return this.http.post<BookValidation>('/api/books/validate', book);
+  }
+
+  /** Saves a book. Fails with 400/409 and a BookValidation body if the server rejects it. */
+  create(book: NewBook): Observable<BookSummary> {
+    return this.http.post<BookSummary>('/api/books', book);
   }
 }
 

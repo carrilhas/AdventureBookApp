@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
 /**
@@ -26,7 +27,8 @@ public class BookLoader implements ApplicationRunner {
 
     private final JsonMapper jsonMapper;
     private final Path booksFolder;
-    private final List<Book> books = new ArrayList<>();
+    /** Copy-on-write: read on every request, written only at startup and when a book is created. */
+    private final List<Book> books = new CopyOnWriteArrayList<>();
 
     public BookLoader(JsonMapper jsonMapper, @Value("${books.folder:books}") String booksFolder) {
         this.jsonMapper = jsonMapper;
@@ -67,20 +69,55 @@ public class BookLoader implements ApplicationRunner {
 
     /**
      * Checks book to see if it is a valid book for the adventure game
-     * @param book
+     * @param book Book
      * @return whether the book can be played
      */
     private boolean isValidBook(Book book) {
-        if(!hasSingleBeginNodes(book) //altered from requirements but it does make sense to check that there's 1 BEGIN node and not zero
-                || hasNoEndingNode(book)
-                || hasInvalidNextSectionId(book)
-                //|| nonEndingSectionHasNoOptions(book)
-                //uncomment this to complete the filtering rules of books, causing us to get no valid books from the test data
-        )
-        {
-            return false;
+        List<String> problems = problemsWith(book);
+        problems.forEach(problem -> log.warn("Book '{}' rejected: {}", book.getTitle(), problem));
+        return problems.isEmpty();
+    }
+
+    /**
+     * The rules a book must follow to be playable. Used both when loading the books folder and when a new book is
+     * created through the API.
+     *
+     * @return a readable description of each rule the book breaks; empty if the book is valid
+     */
+    public List<String> problemsWith(Book book) {
+        if (book.getSections() == null || book.getSections().isEmpty()) {
+            return List.of("a book needs at least one section");
         }
-        return true;
+        List<String> problems = new ArrayList<>();
+        //altered from requirements but it does make sense to check that there's 1 BEGIN node and not zero
+        if (!hasSingleBeginNodes(book)) {
+            problems.add("a book needs exactly one BEGIN section");
+        }
+        if (hasNoEndingNode(book)) {
+            problems.add("a book needs at least one END section");
+        }
+        List<Integer> duplicateIds = duplicateSectionIds(book);
+        if (!duplicateIds.isEmpty()) {
+            problems.add("section ids must be unique, repeated: " + duplicateIds);
+        }
+        List<Integer> invalidGotoIds = invalidNextSectionIds(book);
+        if (!invalidGotoIds.isEmpty()) {
+            problems.add("options point to missing sections: " + invalidGotoIds + " (null means an option has no gotoId)");
+        }
+        //uncomment this to complete the filtering rules of books, causing us to get no valid books from the test data
+        //if (nonEndingSectionHasNoOptions(book)) {
+        //    problems.add("every section that isn't an END section needs at least one option");
+        //}
+        return problems;
+    }
+
+    private static List<Integer> duplicateSectionIds(Book book) {
+        Set<Integer> seen = new HashSet<>();
+        return book.getSections().stream()
+                .map(Section::getId)
+                .filter(id -> !seen.add(id))
+                .distinct()
+                .toList();
     }
 
     /**
@@ -101,23 +138,17 @@ public class BookLoader implements ApplicationRunner {
     }
 
     /**
-     * @return true if any option has no gotoId or points to a section id that doesn't exist in the book
+     * @return the gotoIds of options that are null or point to a section id that doesn't exist in the book
      */
-    private boolean hasInvalidNextSectionId(Book book) {
+    private static List<Integer> invalidNextSectionIds(Book book) {
         Set<Integer> allSectionIds = new HashSet<>();
-        List<Integer> allOptionIds = new ArrayList<>();
         book.getSections().forEach(section -> allSectionIds.add(section.getId()));
-        book.getSections().stream()
+        return book.getSections().stream()
                 .filter(section -> section.getOptions() != null) // END sections have no options
-                .forEach(section -> section.getOptions().forEach(option -> allOptionIds.add(option.getGotoId())));
-
-        List<Integer> invalidIds = allOptionIds.stream()
+                .flatMap(section -> section.getOptions().stream())
+                .map(option -> option.getGotoId())
                 .filter(gotoId -> gotoId == null || !allSectionIds.contains(gotoId))
                 .toList();
-        if (!invalidIds.isEmpty()) {
-            log.warn("Book '{}' has options pointing to missing sections: {}", book.getTitle(), invalidIds);
-        }
-        return !invalidIds.isEmpty();
     }
 
     private boolean hasNoEndingNode(Book book) {
@@ -168,8 +199,28 @@ public class BookLoader implements ApplicationRunner {
     /** "Crystal Caverns.json" -> "crystal-caverns" */
     private static String idFromFileName(Path file) {
         String name = file.getFileName().toString();
-        String stem = name.substring(0, name.length() - ".json".length());
-        return stem.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        return slug(name.substring(0, name.length() - ".json".length()));
+    }
+
+    /** "The Crystal Caverns!" -> "the-crystal-caverns". Used for book ids and the file names of new books. */
+    public static String slug(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+    }
+
+    public Path getBooksFolder() {
+        return booksFolder;
+    }
+
+    /** Makes a newly created book available. The book must already be valid and have an id. */
+    public void add(Book book) {
+        books.add(book);
+    }
+
+    public Optional<Book> findByTitleIgnoreCase(String title) {
+        if (title == null) {
+            return Optional.empty();
+        }
+        return books.stream().filter(b -> title.trim().equalsIgnoreCase(b.getTitle())).findFirst();
     }
 
     public Optional<Book> findById(String id) {
