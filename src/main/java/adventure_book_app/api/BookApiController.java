@@ -5,7 +5,6 @@ import adventure_book_app.api.dto.ApiDtos.BookSummary;
 import adventure_book_app.api.dto.ApiDtos.NewBook;
 import adventure_book_app.model.book.Book;
 import adventure_book_app.service.BookCreationService;
-import adventure_book_app.service.BookCreationService.DuplicateBookException;
 import adventure_book_app.service.BookCreationService.InvalidBookException;
 import adventure_book_app.model.book.Difficulty;
 import adventure_book_app.model.player.Player;
@@ -13,7 +12,6 @@ import adventure_book_app.service.BookLoader;
 import adventure_book_app.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,8 +56,8 @@ public class BookApiController {
 
     /**
      * Creates a book and saves it to the books folder as {@code <id>.json}, where the id comes from the title.
-     * The body has the same shape as the book files. Returns 201 with the new book, or a {@link BookValidation}
-     * with the problems: 400 if it isn't playable, 409 if a book with that title already exists.
+     * The body has the same shape as the book files. Returns 201 with the new book, or 400 with a
+     * {@link BookValidation} listing the problems (including a title that's already taken).
      */
     @PostMapping("/books")
     public ResponseEntity<?> create(@RequestBody(required = false) NewBook request) {
@@ -69,8 +67,6 @@ public class BookApiController {
                     .body(new BookSummary(book.getId(), book.getTitle(), book.getAuthor(), book.getDifficulty(), false));
         } catch (InvalidBookException e) {
             return ResponseEntity.badRequest().body(BookValidation.of(e.getProblems()));
-        } catch (DuplicateBookException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(BookValidation.of(List.of(e.getMessage())));
         }
     }
 

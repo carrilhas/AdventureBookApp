@@ -113,7 +113,7 @@ export class BooksApi {
     return this.http.post<BookValidation>('/api/books/validate', book);
   }
 
-  /** Saves a book. Fails with 400/409 and a BookValidation body if the server rejects it. */
+  /** Saves a book. Fails with 400 and a BookValidation body if the server rejects it. */
   create(book: NewBook): Observable<BookSummary> {
     return this.http.post<BookSummary>('/api/books', book);
   }

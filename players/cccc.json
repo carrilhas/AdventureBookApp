@@ -1,5 +1,21 @@
 {
   "name" : "cccc",
-  "progress" : { },
+  "progress" : {
+    "The Crystal Caverns" : {
+      "sectionId" : 1,
+      "health" : 10,
+      "lastMessage" : null
+    },
+    "sdd" : {
+      "sectionId" : 1,
+      "health" : 10,
+      "lastMessage" : null
+    },
+    "12321321" : {
+      "sectionId" : 1,
+      "health" : 10,
+      "lastMessage" : null
+    }
+  },
   "score" : 0
 }
