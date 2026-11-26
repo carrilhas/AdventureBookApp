@@ -1,0 +1,106 @@
+<p><a routerLink="/">&larr; All books</a></p>
+<h1>New book</h1>
+<p class="meta">
+  A book needs exactly one BEGIN section, at least one END section, and every option must lead to a section that exists.
+  The book is checked as you type, and it can only be saved once it's valid.
+</p>
+
+<!-- Edits bubble up here as input/change events, so one listener re-checks the book after any change. -->
+<div class="editor" (input)="changed()" (change)="changed()">
+  <fieldset class="card">
+    <legend>Book</legend>
+    <label>Title <input type="text" [(ngModel)]="draft.title" maxlength="120" /></label>
+    <label>Author <input type="text" [(ngModel)]="draft.author" maxlength="120" /></label>
+    <label>
+      Difficulty
+      <select [(ngModel)]="draft.difficulty">
+        <option value="">Choose…</option>
+        @for (d of difficulties; track d) {
+          <option [value]="d">{{ d }}</option>
+        }
+      </select>
+    </label>
+  </fieldset>
+
+  @for (section of draft.sections; track section; let i = $index) {
+    <fieldset class="card section" [class.begin]="section.type === 'BEGIN'" [class.end]="section.type === 'END'">
+      <legend>Section {{ i + 1 }}</legend>
+      <div class="row">
+        <label class="narrow">Id <input type="number" [(ngModel)]="section.id" min="0" step="1" /></label>
+        <label class="narrow">
+          Type
+          <select [(ngModel)]="section.type">
+            @for (t of sectionTypes; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="link danger" (click)="removeSection(i)" [disabled]="draft.sections.length === 1">
+          Remove section
+        </button>
+      </div>
+      <label>Text <textarea rows="3" [(ngModel)]="section.text"></textarea></label>
+
+      @if (section.type === 'END') {
+        <p class="meta">END sections finish the book, so they have no options.</p>
+      } @else {
+        @for (option of section.options; track option; let j = $index) {
+          <div class="option">
+            <div class="row">
+              <label class="grow">Option {{ j + 1 }} <input type="text" [(ngModel)]="option.description" /></label>
+              <label class="narrow">
+                Goes to
+                <select [(ngModel)]="option.gotoId">
+                  <option [ngValue]="null">Choose…</option>
+                  @for (id of sectionIds(); track id) {
+                    <option [ngValue]="id">#{{ id }}</option>
+                  }
+                  @if (option.gotoId !== null && !sectionIds().includes(option.gotoId)) {
+                    <option [ngValue]="option.gotoId">#{{ option.gotoId }} (missing)</option>
+                  }
+                </select>
+              </label>
+              <button type="button" class="link danger" (click)="removeOption(section, j)">Remove</button>
+            </div>
+            <div class="row">
+              <label class="narrow">
+                Consequence
+                <select [(ngModel)]="option.consequence.type">
+                  <option value="">None</option>
+                  @for (c of consequenceTypes; track c) {
+                    <option [value]="c">{{ c }}</option>
+                  }
+                </select>
+              </label>
+              @if (option.consequence.type) {
+                <label class="narrow">Amount <input type="number" [(ngModel)]="option.consequence.value" min="0" step="1" /></label>
+                <label class="grow">Message <input type="text" [(ngModel)]="option.consequence.text" /></label>
+              }
+            </div>
+          </div>
+        }
+        <button type="button" class="link" (click)="addOption(section)">+ Add option</button>
+      }
+    </fieldset>
+  }
+
+  <button type="button" class="link" (click)="addSection()">+ Add section</button>
+</div>
+
+<div class="save-bar" aria-live="polite">
+  <div class="status">
+    @if (checking()) {
+      <span class="meta">Checking…</span>
+    } @else if (validation()?.valid) {
+      <span class="ok">✓ This book is valid and ready to save.</span>
+    } @else if (validation(); as v) {
+      <strong class="error">This book can't be saved yet:</strong>
+      <ul class="problems">
+        @for (p of v.problems; track p) {
+          <li>{{ p }}</li>
+        }
+      </ul>
+    }
+  </div>
+  <button type="button" (click)="save()" [disabled]="!canSave()">{{ saving() ? 'Saving…' : 'Save book' }}</button>
+</div>

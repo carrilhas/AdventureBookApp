@@ -1,0 +1,51 @@
+<div class="page-title">
+  <h1>Choose your adventure</h1>
+  <a class="button" routerLink="/books/new">+ New book</a>
+</div>
+
+@if (player.value(); as p) {
+  <p>Playing as <strong>{{ p.name }}</strong> &middot; <a routerLink="/register">change</a></p>
+} @else if (!player.isLoading()) {
+  <p><a routerLink="/register">Register your name</a> to save your progress.</p>
+}
+
+<form class="filters" (submit)="applyFilters($event)">
+  <input type="search" name="q" placeholder="Search title or author" aria-label="Search" [value]="q() ?? ''" />
+  <select name="author" aria-label="Author">
+    <option value="">All authors</option>
+    @for (a of authors.value() ?? []; track a) {
+      <option [value]="a" [selected]="a.toLowerCase() === (author() ?? '').trim().toLowerCase()">{{ a }}</option>
+    }
+  </select>
+  <select name="difficulty" aria-label="Difficulty">
+    <option value="">All difficulties</option>
+    @for (d of difficulties; track d) {
+      <option [value]="d" [selected]="d === (difficulty() ?? '').trim().toUpperCase()">{{ d }}</option>
+    }
+  </select>
+  <button type="submit">Filter</button>
+  @if (filtering()) {
+    <a routerLink="/">Clear</a>
+  }
+</form>
+
+@if (books.error()) {
+  <p class="error">Couldn't load the books. Is the server running?</p>
+} @else if (books.hasValue()) {
+  @let list = books.value();
+  @if (list.length === 0) {
+    <p>{{ filtering() ? 'No books match your search.' : 'No books available.' }}</p>
+  } @else {
+    <ul class="books">
+      @for (book of list; track book.id) {
+        <li class="card">
+          <h2>{{ book.title }}</h2>
+          <p class="meta">by {{ book.author }} &middot; {{ book.difficulty ?? 'Unknown' }}</p>
+          <a class="button" [routerLink]="['/play', book.id]">{{ book.inProgress ? 'Continue' : 'Play' }}</a>
+        </li>
+      }
+    </ul>
+  }
+} @else {
+  <p class="meta">Loading…</p>
+}

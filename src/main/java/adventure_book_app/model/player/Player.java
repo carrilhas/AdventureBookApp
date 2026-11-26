@@ -9,8 +9,7 @@ import java.util.Map;
 public class Player {
     private String name;
     private int score;
-    private int health;
 
-    /** Current section id the player is on, keyed by book title. */
-    private Map<String, Integer> progress = new HashMap<>();
+    /** Progress in each book the player has started, keyed by book title. Health is tracked per book. */
+    private Map<String, BookProgress> progress = new HashMap<>();
 }
